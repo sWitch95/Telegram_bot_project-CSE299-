@@ -1,0 +1,12 @@
+python-dotenv
+langchain
+langchain-community
+chromadb
+tqdm
+pandas
+unstructured
+nltk
+pillow
+PyMuPDF
+beautifulsoup4
+scikit-learn
