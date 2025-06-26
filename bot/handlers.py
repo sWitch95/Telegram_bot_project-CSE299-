@@ -2,7 +2,7 @@ from typing import Final
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-from rag.langchain_pipeline import answer_query  # ✅ LangChain query function import
+from rag.langchain_pipeline import answer_query  # LangChain query function import
 
 TOKEN = '7677389671:AAE_ILH0WyacSU21vqUlLCIn_m-gSY-pNfg'
 BOT_USERNAME: Final = '@medication_remider_and_info_bot'
@@ -16,7 +16,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("This is a custom command response!")
 
-# 💬 Response logic
+# Response logic
 def handle_response(text: str) -> str:
     processed = text.lower()
 
@@ -32,7 +32,7 @@ def handle_response(text: str) -> str:
     else:
         return "I'm not sure about that. Please ask me about a medication."
 
-# 🔄 Handles every user message
+#  Handles every user message
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_type = update.message.chat.type
     text = update.message.text
@@ -50,13 +50,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print('Bot:', response)
     await update.message.reply_text(response)
 
-# 🛠️ Error handler
+#  Error handler
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update "{update}" caused error "{context.error}"')
 
-# 🚀 Run bot
+#  Run bot
 if __name__ == '__main__':
-    print("🤖 Starting the bot...")
+    print(" Starting the bot...")
     application = ApplicationBuilder().token(TOKEN).build()
 
     application.add_handler(CommandHandler('start', start_command))
@@ -65,5 +65,5 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_error_handler(error)
 
-    print("✅ Bot is running...")
+    print(" Bot is running...")
     application.run_polling(poll_interval=3)
