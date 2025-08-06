@@ -1,28 +1,46 @@
 import os
-import pandas as pd
+import json
 from tqdm import tqdm
 from langchain_community.vectorstores import Chroma
 from langchain_ollama import OllamaEmbeddings
 from langchain.schema import Document
 
-csv_folder = "data"
+json_file = "data/modified_drug_dataset.json"
 persist_directory = "embeddings/chroma"
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 50
 
 print("🚀 Initializing embedding model...")
 embedding_model = OllamaEmbeddings(model="mistral")
 
-print("📄 Loading CSV files...")
-all_texts = []
-for file in os.listdir(csv_folder):
-    if file.endswith(".csv"):
-        print(f"➡️ Reading: {file}")
-        df = pd.read_csv(os.path.join(csv_folder, file))
-        for _, row in df.iterrows():
-            text = " ".join([str(v) for v in row.values if pd.notna(v)])
-            all_texts.append(Document(page_content=text))
+print("📄 Loading JSON file...")
+with open(json_file, "r", encoding="utf-8") as f:
+    data = json.load(f)
 
-print(f"📦 Total documents to embed: {len(all_texts)}")
+all_texts = []
+print("🧾 Preparing documents for embedding...")
+for i, entry in enumerate(data):
+    name = entry.get("Name", "Unknown")
+    entry_type = entry.get("Type", "Generic")
+    generic_name = entry.get("Generic Name", "")
+    aliases = [name]
+    if generic_name and generic_name.lower() not in name.lower():
+        aliases.append(generic_name)
+    alias_str = ", ".join(aliases)
+
+    # Log the drug being embedded
+    print(f"➡️ Embedding: {name} ({entry_type})")
+
+    # Make brand/generic names prominent
+    text = (
+        f"Brand Name: {name}\n"
+        f"Type: {entry_type}\n"
+        f"Generic Name: {generic_name}\n"
+        f"Aliases: {alias_str}\n"
+        + " ".join([str(v) for v in entry.values() if v])
+    )
+    all_texts.append(Document(page_content=text))
+
+print(f"\n📦 Total documents to embed: {len(all_texts)}")
 
 print("🔧 Loading existing Chroma DB...")
 db = Chroma(
@@ -32,7 +50,7 @@ db = Chroma(
 existing_count = db._collection.count()
 print(f"📍 Already embedded: {existing_count} documents")
 
-# Chunk-wise loop
+# Chunk-wise embedding loop
 for i in range(existing_count, len(all_texts), CHUNK_SIZE):
     chunk = all_texts[i:i+CHUNK_SIZE]
     print(f"\n🧩 Embedding chunk {i} → {i+len(chunk)}")
