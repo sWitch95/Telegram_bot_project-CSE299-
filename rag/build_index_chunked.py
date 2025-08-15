@@ -1,61 +1,70 @@
+# build_index_chunked.py
 import os
 import json
 from tqdm import tqdm
-from langchain_community.vectorstores import Chroma
-from langchain_ollama import OllamaEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain.schema import Document
 
+# Config
 json_file = "data/modified_drug_dataset.json"
-persist_directory = "embeddings/chroma"
+persist_directory = "embeddings/faiss"
 CHUNK_SIZE = 50
 
-print("🚀 Initializing embedding model...")
-embedding_model = OllamaEmbeddings(model="mistral")
+# Embedding model (SentenceTransformer)
+embedding_model = SentenceTransformerEmbeddings(
+    model_name="all-MiniLM-L6-v2",  # চাইলে অন্য মডেল দিতে পারেন
+    model_kwargs={"device": "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"}
+)
 
+# Load JSON
 print("📄 Loading JSON file...")
 with open(json_file, "r", encoding="utf-8") as f:
     data = json.load(f)
 
-all_texts = []
-print("🧾 Preparing documents for embedding...")
-for i, entry in enumerate(data):
+# Prepare all documents
+all_docs = []
+for entry in data:
     name = entry.get("Name", "Unknown")
-    entry_type = entry.get("Type", "Generic")
+    entry_type = entry.get("Type", "")
     generic_name = entry.get("Generic Name", "")
-    aliases = [name]
-    if generic_name and generic_name.lower() not in name.lower():
-        aliases.append(generic_name)
-    alias_str = ", ".join(aliases)
 
-    # Log the drug being embedded
-    print(f"➡️ Embedding: {name} ({entry_type})")
+    # Include all non-empty fields
+    content_parts = []
+    for key, value in entry.items():
+        if value and isinstance(value, str):
+            content_parts.append(f"{key}: {value}")
 
-    # Make brand/generic names prominent
-    text = (
-        f"Brand Name: {name}\n"
-        f"Type: {entry_type}\n"
-        f"Generic Name: {generic_name}\n"
-        f"Aliases: {alias_str}\n"
-        + " ".join([str(v) for v in entry.values() if v])
+    full_text = "\n".join(content_parts)
+    all_docs.append(Document(page_content=full_text, metadata={"name": name, "type": entry_type}))
+
+print(f"📦 Total docs to embed: {len(all_docs)}")
+
+# Load existing FAISS index or create new
+if os.path.exists(persist_directory):
+    print("🔄 Loading existing FAISS index...")
+    db = FAISS.load_local(
+        persist_directory,
+        embedding_model,
+        allow_dangerous_deserialization=True
     )
-    all_texts.append(Document(page_content=text))
+    existing_count = len(db.index_to_docstore_id)
+else:
+    print("🆕 Creating new FAISS index...")
+    db = None
+    existing_count = 0
 
-print(f"\n📦 Total documents to embed: {len(all_texts)}")
-
-print("🔧 Loading existing Chroma DB...")
-db = Chroma(
-    persist_directory=persist_directory,
-    embedding_function=embedding_model
-)
-existing_count = db._collection.count()
 print(f"📍 Already embedded: {existing_count} documents")
 
-# Chunk-wise embedding loop
-for i in range(existing_count, len(all_texts), CHUNK_SIZE):
-    chunk = all_texts[i:i+CHUNK_SIZE]
-    print(f"\n🧩 Embedding chunk {i} → {i+len(chunk)}")
-    db.add_documents(chunk)
-    db.persist()
-    print(f"✅ Saved up to {i+len(chunk)} documents")
+# Embed remaining chunks
+for i in range(existing_count, len(all_docs), CHUNK_SIZE):
+    chunk = all_docs[i:i+CHUNK_SIZE]
+    print(f"🧩 Embedding docs {i} → {i+len(chunk)}")
+    if db is None:
+        db = FAISS.from_documents(chunk, embedding_model)
+    else:
+        db.add_documents(chunk)
+    db.save_local(persist_directory)
+    print(f"✅ Saved progress at {i+len(chunk)} docs")
 
-print("🎉 All available documents embedded successfully!")
+print("🎉 Embedding completed successfully!")

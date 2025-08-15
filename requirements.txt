@@ -1,7 +1,8 @@
 python-dotenv
 langchain
 langchain-community
-chromadb
+langchain-groq
+faiss-cpu
 tqdm
 pandas
 unstructured
