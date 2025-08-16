@@ -4,7 +4,7 @@ import torch
 from bert_score import score
 from rag.langchain_pipeline import answer_query
 
-TEST_FILE = "data/test_hundred_queries.json"
+TEST_FILE = "data/test_queries.json"
 
 def main():
     with open(TEST_FILE, "r", encoding="utf-8") as f:

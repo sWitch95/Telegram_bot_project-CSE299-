@@ -12,11 +12,14 @@ class VoiceHandler:
         self.tts_engine = pyttsx3.init()
         self.tts_engine.setProperty('rate', 150)
         self.tts_engine.setProperty('volume', 1.0)
+
+        # Set English voice
         voices = self.tts_engine.getProperty('voices')
         for voice in voices:
             if 'english' in voice.name.lower():
                 self.tts_engine.setProperty('voice', voice.id)
                 break
+
         print("✅ VoiceHandler initialized!")
 
     def convert_ogg_to_wav(self, ogg_path: str) -> str:
@@ -32,37 +35,44 @@ class VoiceHandler:
             print(f"❌ Conversion error: {e}")
             return None
 
-    def speech_to_text(self, audio_file_path: str) -> str:
+    def speech_to_text(self, audio_file_path: str, return_lang: bool = False):
+        """
+        Converts speech to text. If return_lang=True, also returns detected language code.
+        """
         try:
             if audio_file_path.endswith('.ogg'):
                 audio_file_path = self.convert_ogg_to_wav(audio_file_path)
                 if not audio_file_path:
-                    return None
+                    return (None, None) if return_lang else None
 
             with sr.AudioFile(audio_file_path) as source:
                 self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
                 audio = self.recognizer.listen(source)
 
+            # Try Bangla first, then English
             for lang_code in ['bn-BD', 'en-US']:
                 try:
                     text = self.recognizer.recognize_google(audio, language=lang_code)
                     if text.strip():
-                        return text.strip()
+                        return (text.strip(), lang_code) if return_lang else text.strip()
                 except:
                     continue
 
-            return None
+            return (None, None) if return_lang else None
         except Exception as e:
             print(f"❌ STT error: {e}")
-            return None
+            return (None, None) if return_lang else None
 
-    def text_to_speech(self, text: str) -> str:
+    def text_to_speech(self, text: str, language: str = 'en') -> str:
+        """
+        Generates speech based on detected language.
+        """
         try:
             temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
             temp_audio_path = temp_audio.name
             temp_audio.close()
 
-            if any(char in text for char in 'অআইঈউঊএঐওঔকখগঘচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহ'):
+            if language.startswith('bn'):
                 gTTS(text=text, lang='bn').save(temp_audio_path)
             else:
                 self.tts_engine.save_to_file(text, temp_audio_path)

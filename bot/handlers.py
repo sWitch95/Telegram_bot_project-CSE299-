@@ -61,6 +61,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         answer = handle_response(recognized_text)
         await update.message.reply_text(f"📝 উত্তর:\n{answer}")
 
+        # Language-specific voice answer
         tts_path = voice_handler.text_to_speech(answer, language=detected_lang)
         if tts_path and os.path.exists(tts_path):
             with open(tts_path, 'rb') as voice_file:
@@ -73,7 +74,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"❌ Voice handling error: {e}")
         await update.message.reply_text("⚠️ ভয়েস মেসেজ প্রসেস করতে সমস্যা হয়েছে।")
 
-# 🖼️ Handle Photo with OCR
+# OCR Handler (unchanged except minor tweaks)
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         photo = update.message.photo[-1]
@@ -89,10 +90,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ কোন লেখা পড়া যায়নি। অনুগ্রহ করে স্পষ্ট ছবি দিন।")
             return
 
-        # Save OCR text
         context.user_data['ocr_text'] = ocr_text
 
-        # Language selection keyboard
         keyboard = [
             [InlineKeyboardButton("🇧🇩 বাংলা", callback_data='lang_ben')],
             [InlineKeyboardButton("🇬🇧 English", callback_data='lang_eng')],
@@ -106,68 +105,46 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"❌ Error in handle_photo: {e}")
         await update.message.reply_text("⚠️ ছবি প্রসেস করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।")
 
-# 🌐 Language Selection Handler
+# Language & Query Selection (unchanged)
 async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    lang_code = query.data.replace('lang_', '')  # 'ben' or 'eng'
+    lang_code = query.data.replace('lang_', '')
     context.user_data['lang'] = lang_code
 
-    # Query type buttons
     keyboard = [
         [InlineKeyboardButton("💊 General Info / সাধারণ তথ্য", callback_data='query_general')],
         [InlineKeyboardButton("⚠️ Side Effects / পার্শ্বপ্রতিক্রিয়া", callback_data='query_side_effects')],
         [InlineKeyboardButton("📘 Usage / ব্যবহারের নিয়ম", callback_data='query_usage')],
         [InlineKeyboardButton("🧬 Pharmacology / ফার্মাকোলজি", callback_data='query_pharmacology')],
         [InlineKeyboardButton("👶 Pediatric Use / শিশুদের ব্যবহার", callback_data='query_pediatric')],
-        
     ]
     await query.edit_message_text(
-        "🔍 এখন আপনি কোন তথ্য জানতে চান তা বেছে নিন (একাধিক বার ক্লিক করা যাবে):",
+        "🔍 এখন আপনি কোন তথ্য জানতে চান তা বেছে নিন:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 📌 Query Execution Handler (multiple clicks allowed)
 async def handle_query_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     ocr_text = context.user_data.get('ocr_text', '')
-    lang = context.user_data.get('lang', 'eng')  # Default to English
+    lang = context.user_data.get('lang', 'eng')
 
     if not ocr_text:
         await query.edit_message_text("⚠️ OCR ফলাফল পাওয়া যায়নি। আবার ছবি পাঠান।")
         return
 
-    query_type = query.data.replace('query_', '')
-
-    # Language-wise prompts
     prompts = {
-        'general': {
-            'eng': "What is this medicine?",
-            'ben': "এই ওষুধটি কী?"
-        },
-        'side_effects': {
-            'eng': "What are the side effects of this medicine?",
-            'ben': "এই ওষুধের পার্শ্বপ্রতিক্রিয়া কী?"
-        },
-        'usage': {
-            'eng': "How is this medicine used?",
-            'ben': "এই ওষুধটি কীভাবে ব্যবহার করা হয়?"
-        },
-        'pharmacology': {
-            'eng': "Describe the pharmacology of this medicine.",
-            'ben': "এই ওষুধের ফার্মাকোলজিকাল বিবরণ দিন।"
-        },
-        'pediatric': {
-            'eng': "What is the pediatric usage of this medicine?",
-            'ben': "শিশুদের ক্ষেত্রে এই ওষুধের ব্যবহার কেমন?"
-        },
-       
+        'general': {'eng': "What is this medicine?", 'ben': "এই ওষুধটি কী?"},
+        'side_effects': {'eng': "What are the side effects of this medicine?", 'ben': "এই ওষুধের পার্শ্বপ্রতিক্রিয়া কী?"},
+        'usage': {'eng': "How is this medicine used?", 'ben': "এই ওষুধটি কীভাবে ব্যবহার করা হয়?"},
+        'pharmacology': {'eng': "Describe the pharmacology of this medicine.", 'ben': "এই ওষুধের ফার্মাকোলজিকাল বিবরণ দিন।"},
+        'pediatric': {'eng': "What is the pediatric usage of this medicine?", 'ben': "শিশুদের ক্ষেত্রে এই ওষুধের ব্যবহার কেমন?"},
     }
 
-    prompt = prompts[query_type][lang]
+    prompt = prompts[query.data.replace('query_', '')][lang]
     full_query = f"{prompt}\n\n{ocr_text}"
 
     try:
@@ -178,7 +155,6 @@ async def handle_query_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.message.reply_text(f"🔍 {prompt}\n\n{response}")
 
-# ⚠️ Error
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"⚠️ Error: {context.error}")
 
