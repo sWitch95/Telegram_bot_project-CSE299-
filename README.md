@@ -5,6 +5,22 @@ The system is designed to answer **medicine-related queries**, process **medicin
 It combines **Natural Language Processing (NLP)**, **Retrieval-Augmented Generation (RAG)**, and **speech technologies** to create a robust and user-friendly assistant.
 
 ---
+## 📌 Project Overview
+
+- **Project Title**: Medication Reminder and Info Bot  
+- **Course**: CSE 299 – Junior Design Project (Summer 2025)  
+- **Section**: 03  
+- **Supervisor**: Dr. Shafin Rahman  
+- **Group Number**: 2  
+
+**Team Members**:
+- Aqib Ahmed  
+- Towhidul Islam  
+- Md. Yousuf   
+- M.G. Rabbi Hossen  
+
+---
+
 
 ## 🚀 Key Features
 
@@ -76,7 +92,7 @@ GROQ_API_KEY=your_groq_api_key
 
 ### 5. Run the Bot
 ```bash
-python handlers.py
+python -m bot.handlers
 ```
 
 ---
@@ -105,24 +121,7 @@ This system can be extended in the following directions:
 
 ---
 
-## 👨‍💻 Authors
+## 📄 License & Acknowledgements
 
-- **[Aqib Ahmed]**  
-CSE299 – Section 3 – Group 2
-North South University
-Department of Computer Science & Engineering  
-
----
-
-## 📚 Citation
-
-If you use this project in your research or development, please cite it as:
-
-```
-@project{medicine-assistant-bot2025,
-  title={Bilingual Medicine Assistant Bot with Voice, OCR, and RAG Pipeline},
-  author={Your Name, Group 2},
-  year={2025},
-  institution={Department of CSE},
-}
-```
+This project is created for educational purposes under the supervision of **Dr. Shafin Rahman**.  
+All third-party models and datasets are used in accordance with their respective licenses.
